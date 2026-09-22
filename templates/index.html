@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>NETTRACE — Application Layer Visualizer</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+
+        <div class="brand">
+            <div class="brand-icon">N</div>
+
+            <div>
+                <h1>NETTRACE</h1>
+                <p>Application Layer Protocol Visualizer</p>
+            </div>
+        </div>
+
+        <div class="system-status">
+            <!-- <span class="online-dot"></span> -->
+            <h1><span>ASSIGNMENT</span></h1>
+        </div>
+
+    </header>
+
+
+    <!-- MAIN TWO-PANEL LAYOUT -->
+    <main class="dashboard">
+
+        <!-- ==================================================
+             LEFT PANEL
+        =================================================== -->
+
+        <section class="panel control-panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <span class="panel-number">01</span>
+                    <h2>Activity</h2>
+                </div>
+
+                <span class="panel-label">CONTROL</span>
+
+            </div>
+
+
+            <!-- ACTIVITY TABS -->
+
+            <div class="activity-tabs">
+
+                <button
+                    id="browsingTab"
+                    class="activity-tab active"
+                    onclick="selectActivity('browsing')">
+
+                    <span class="tab-icon">◉</span>
+
+                    <span>
+                        <strong>Browsing</strong>
+                        <small>DNS + HTTP</small>
+                    </span>
+
+                </button>
+
+
+                <button
+                    id="mailTab"
+                    class="activity-tab"
+                    onclick="selectActivity('mail')">
+
+                    <span class="tab-icon">✉</span>
+
+                    <span>
+                        <strong>Mail</strong>
+                        <small>SMTP</small>
+                    </span>
+
+                </button>
+
+
+                <button
+                    id="streamingTab"
+                    class="activity-tab"
+                    onclick="selectActivity('streaming')">
+
+                    <span class="tab-icon">▶</span>
+
+                    <span>
+                        <strong>Streaming</strong>
+                        <small>DNS + HTTP</small>
+                    </span>
+
+                </button>
+
+            </div>
+
+
+            <!-- ==================================================
+                 BROWSING
+            =================================================== -->
+
+            <div id="browsing" class="activity active">
+
+                <div class="activity-heading">
+
+                    <div class="activity-symbol web-symbol">
+                        WEB
+                    </div>
+
+                    <div>
+                        <h3>Web Browsing</h3>
+                        <p>Resolve a domain and request a resource.</p>
+                    </div>
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="url">
+                        TARGET URL
+                    </label>
+
+                    <input
+                        id="url"
+                        type="text"
+                        value="https://example.com"
+                        placeholder="https://example.com">
+
+                </div>
+
+
+                <button
+                    class="primary-button"
+                    onclick="startBrowsing()">
+
+                    <span>Visit</span>
+                    <span>→</span>
+
+                </button>
+
+
+                <div class="status-card">
+
+                    <div class="status-title">
+                        <span>Status</span>
+                        <span class="ready-label">READY</span>
+                    </div>
+
+                    <p id="browseStatus">
+                        Ready to browse.
+                    </p>
+
+                </div>
+
+
+                <div class="activity-log">
+
+                    <div class="log-heading">
+                        <span>Activity log</span>
+                    </div>
+
+                    <div
+                        id="browseLog"
+                        class="log-body">
+
+                        <div class="log-empty">
+                            No activity yet.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 MAIL
+            =================================================== -->
+
+            <div id="mail" class="activity">
+
+                <div class="activity-heading">
+
+                    <div class="activity-symbol mail-symbol">
+                        SMTP
+                    </div>
+
+                    <div>
+                        <h3>Email Transfer</h3>
+                        <p>Simulate an SMTP client-server session.</p>
+                    </div>
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="mailTo">
+                        RECIPIENT
+                    </label>
+
+                    <input
+                        id="mailTo"
+                        type="email"
+                        placeholder="student@example.com">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="mailSubject">
+                        SUBJECT
+                    </label>
+
+                    <input
+                        id="mailSubject"
+                        type="text"
+                        placeholder="Computer Networks Test">
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="mailBody">
+                        MESSAGE
+                    </label>
+
+                    <textarea
+                        id="mailBody"
+                        placeholder="Enter your message..."></textarea>
+
+                </div>
+
+
+                <button
+                    class="primary-button"
+                    onclick="startMail()">
+
+                    <span>Send Mail</span>
+                    <span>→</span>
+
+                </button>
+
+
+                <div class="status-card">
+
+                    <div class="status-title">
+                        <span>Status</span>
+                        <span class="ready-label">READY</span>
+                    </div>
+
+                    <p id="mailStatus">
+                        Ready to send.
+                    </p>
+
+                </div>
+
+
+                <div class="activity-log">
+
+                    <div class="log-heading">
+                        <span>Activity log</span>
+                    </div>
+
+                    <div
+                        id="mailLog"
+                        class="log-body">
+
+                        <div class="log-empty">
+                            No activity yet.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 STREAMING
+            =================================================== -->
+
+            <div id="streaming" class="activity">
+
+                <div class="activity-heading">
+
+                    <div class="activity-symbol stream-symbol">
+                        ▶
+                    </div>
+
+                    <div>
+                        <h3>Video Streaming</h3>
+                        <p>Manifest and media segment delivery.</p>
+                    </div>
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="quality">
+                        STREAM QUALITY
+                    </label>
+
+                    <select id="quality">
+
+                        <option value="360p">
+                            360p — Low
+                        </option>
+
+                        <option value="480p">
+                            480p — Standard
+                        </option>
+
+                        <option value="720p" selected>
+                            720p — HD
+                        </option>
+
+                        <option value="1080p">
+                            1080p — Full HD
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="stream-actions">
+
+                    <button
+                        class="primary-button"
+                        onclick="startStreaming()">
+
+                        <span>Play Stream</span>
+                        <span>▶</span>
+
+                    </button>
+
+                    <button
+                        class="secondary-button"
+                        onclick="pauseVisualization()">
+
+                        Ⅱ&nbsp; Pause
+
+                    </button>
+
+                </div>
+
+
+                <div class="status-card">
+
+                    <div class="status-title">
+                        <span>Status</span>
+                        <span class="ready-label">READY</span>
+                    </div>
+
+                    <p id="streamStatus">
+                        Ready to stream.
+                    </p>
+
+                </div>
+
+
+                <div class="activity-log">
+
+                    <div class="log-heading">
+                        <span>Activity log</span>
+                    </div>
+
+                    <div
+                        id="streamLog"
+                        class="log-body">
+
+                        <div class="log-empty">
+                            No activity yet.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ==================================================
+             RIGHT PANEL
+        =================================================== -->
+
+        <section class="panel visualization-panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <span class="panel-number">02</span>
+                    <h2>Protocol Visualization</h2>
+                </div>
+
+                <span class="panel-label">LIVE TRACE</span>
+
+            </div>
+
+
+            <!-- PROTOCOL HEADER -->
+
+            <div class="protocol-header">
+
+                <div>
+
+                    <span class="protocol-caption">
+                        ACTIVE PROTOCOL
+                    </span>
+
+                    <div
+                        id="activeProtocol"
+                        class="protocol-name">
+
+                        READY
+
+                    </div>
+
+                </div>
+
+
+                <div class="step-counter">
+
+                    <span>SEQUENCE</span>
+
+                    <strong id="stepCounter">
+                        STEP 0 / 0
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <!-- CLIENT / SERVER -->
+
+            <div class="network-view">
+
+                <div class="network-endpoint">
+
+                    <div class="endpoint-icon client">
+                        C
+                    </div>
+
+                    <div>
+                        <span>CLIENT</span>
+                        <strong>Local Endpoint</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="network-channel">
+
+                    <div class="channel-line"></div>
+
+                    <div class="channel-arrow">
+                        →
+                    </div>
+
+                </div>
+
+
+                <div class="network-endpoint">
+
+                    <div class="endpoint-icon server">
+                        S
+                    </div>
+
+                    <div>
+                        <span>REMOTE SERVER</span>
+                        <strong>Remote Endpoint</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- CURRENT MESSAGE -->
+
+            <div id="messageArea" class="message-area">
+
+              <div class="network-idle">
+          
+                  <div class="idle-header">
+                      <span>NETWORK MONITOR</span>
+                      <span class="monitor-status">
+                          <i></i> IDLE
+                      </span>
+                  </div>
+          
+                  <div class="idle-network">
+          
+                      <div class="idle-node">
+                          <div class="idle-node-icon">C</div>
+                          <span>CLIENT</span>
+                      </div>
+          
+                      <div class="idle-link">
+                          <span class="idle-packet packet-a"></span>
+                          <span class="idle-packet packet-b"></span>
+                          <span class="idle-line"></span>
+                      </div>
+          
+                      <div class="idle-node">
+                          <div class="idle-node-icon dns-node">D</div>
+                          <span>DNS</span>
+                      </div>
+          
+                      <div class="idle-link">
+                          <span class="idle-packet packet-c"></span>
+                          <span class="idle-packet packet-d"></span>
+                          <span class="idle-line"></span>
+                      </div>
+          
+                      <div class="idle-node">
+                          <div class="idle-node-icon server-node">S</div>
+                          <span>SERVER</span>
+                      </div>
+          
+                  </div>
+          
+                  <div class="idle-information">
+          
+                      <div class="idle-title">
+                          Monitoring network activity
+                      </div>
+          
+                      <div class="idle-subtitle">
+                          Waiting for an Application Layer exchange
+                      </div>
+          
+                      <div class="idle-protocols">
+          
+                          <span>DNS</span>
+                          <span>HTTP</span>
+                          <span>SMTP</span>
+          
+                      </div>
+          
+                  </div>
+          
+              </div>
+          
+          </div>
+
+
+            <!-- SEQUENCE -->
+
+            <div class="sequence-section">
+
+                <div class="sequence-header">
+
+                    <span>PACKET SEQUENCE</span>
+
+                    <span>
+                        TIME →
+                    </span>
+
+                </div>
+
+                <div
+                    id="timeline"
+                    class="timeline">
+                </div>
+
+            </div>
+
+
+            <!-- CONTROLS -->
+
+            <div class="visual-controls">
+
+                <button
+                    onclick="previousStep()">
+                    ← Previous
+                </button>
+
+                <button
+                    onclick="nextStep()">
+                    Next →
+                </button>
+
+                <button
+                    onclick="pauseVisualization()">
+                    Ⅱ Pause
+                </button>
+
+                <button
+                    onclick="replay()">
+                    ↻ Replay
+                </button>
+
+            </div>
+
+
+            <!-- PROTOCOL LEGEND -->
+
+            <div class="protocol-legend">
+
+                <span>
+                    <i class="legend-dns"></i>
+                    DNS
+                </span>
+
+                <span>
+                    <i class="legend-http"></i>
+                    HTTP
+                </span>
+
+                <span>
+                    <i class="legend-smtp"></i>
+                    SMTP
+                </span>
+
+                <span>
+                    <i class="legend-response"></i>
+                    Response
+                </span>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer>
+
+        <span>NETTRACE</span>
+
+        <span>
+            Computer Networks — Application Layer
+        </span>
+
+        <span>
+            DNS · HTTP · SMTP
+        </span>
+
+    </footer>
+
+</div>
+
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
