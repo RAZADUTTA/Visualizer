@@ -2209,3 +2209,88 @@ footer {
         animation: none;
     }
 }
+
+/* =========================================================
+   PROTOCOL VIEW TABS
+   ========================================================= */
+
+   .protocol-view-tabs {
+    display: flex;
+    gap: 6px;
+
+    margin: 18px 0;
+
+    padding: 4px;
+
+    width: fit-content;
+
+    background: #f1f4f7;
+
+    border: 1px solid #e0e5e9;
+
+    border-radius: 8px;
+}
+
+.protocol-view-tab {
+    border: none;
+
+    background: transparent;
+
+    padding: 8px 14px;
+
+    border-radius: 6px;
+
+    color: #66727d;
+
+    font-family: "Segoe UI", sans-serif;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.protocol-view-tab:hover {
+    background: #e7edf3;
+}
+
+.protocol-view-tab.active {
+    background: #ffffff;
+
+    color: #0067c0;
+
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* =========================================================
+   TRANSPORT PROTOCOL TAG
+   ========================================================= */
+
+   .message-transport {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 4px 8px;
+
+    border-radius: 6px;
+
+    background: #f0f4f8;
+
+    border: 1px solid #d8e0e7;
+
+    color: #52606d;
+
+    font-family: Consolas, monospace;
+
+    font-size: 8px;
+
+    font-weight: 650;
+
+    letter-spacing: 0.2px;
+}

@@ -7,6 +7,8 @@ let currentSteps = [];
 let currentStep = -1;
 let timer = null;
 let isPaused = false;
+let currentProtocolView = "application";
+let transportSteps = [];
 
 
 // ============================================================
@@ -195,7 +197,23 @@ function clearVisualization() {
 // LOAD PROTOCOL STEPS
 // ============================================================
 
-function loadSteps(steps) {
+function loadSteps(steps, transport = []) {
+
+    stopTimer();
+
+    currentSteps = steps;
+    transportSteps = transport;
+
+    currentStep = -1;
+    isPaused = false;
+
+    createTimeline();
+
+    if (currentSteps.length > 0) {
+        nextStep();
+        startTimer();
+    }
+}
 
     stopTimer();
 
@@ -209,8 +227,12 @@ function loadSteps(steps) {
         nextStep();
         startTimer();
     }
-}
 
+
+
+// ============================================================
+// SHOW CURRENT STEP
+// ============================================================
 
 // ============================================================
 // SHOW CURRENT STEP
@@ -218,7 +240,9 @@ function loadSteps(steps) {
 
 function showStep(index) {
 
-    if (!currentSteps.length) {
+    const visibleSteps = getCurrentStepList();
+
+    if (!visibleSteps.length) {
         return;
     }
 
@@ -226,14 +250,13 @@ function showStep(index) {
         index = 0;
     }
 
-    if (index >= currentSteps.length) {
-        index = currentSteps.length - 1;
+    if (index >= visibleSteps.length) {
+        index = visibleSteps.length - 1;
     }
 
     currentStep = index;
 
-    const step =
-        currentSteps[currentStep];
+    const step = visibleSteps[currentStep];
 
     const protocol =
         document.getElementById("activeProtocol");
@@ -246,15 +269,22 @@ function showStep(index) {
 
 
     if (protocol) {
-        protocol.textContent =
-            step.protocol;
+
+        if (currentProtocolView === "transport") {
+            protocol.textContent =
+                step.transportProtocol || "TCP";
+        } else {
+            protocol.textContent =
+                step.protocol;
+        }
+
     }
 
 
     if (counter) {
 
         counter.textContent =
-            `STEP ${currentStep + 1} / ${currentSteps.length}`;
+            `STEP ${currentStep + 1} / ${visibleSteps.length}`;
 
     }
 
@@ -262,6 +292,7 @@ function showStep(index) {
     if (messageArea) {
 
         messageArea.innerHTML = "";
+
 
         const card =
             document.createElement("div");
@@ -284,7 +315,9 @@ function showStep(index) {
             "message-protocol";
 
         protocolTag.textContent =
-            step.protocol;
+            currentProtocolView === "transport"
+                ? (step.transportProtocol || "TCP")
+                : step.protocol;
 
 
         const directionTag =
@@ -298,6 +331,23 @@ function showStep(index) {
 
 
         top.appendChild(protocolTag);
+
+
+        if (step.transport) {
+
+            const transportTag =
+                document.createElement("span");
+
+            transportTag.className =
+                "message-transport";
+
+            transportTag.textContent =
+                step.transport;
+
+            top.appendChild(transportTag);
+        }
+
+
         top.appendChild(directionTag);
 
 
@@ -332,22 +382,52 @@ function showStep(index) {
 
 
         messageArea.appendChild(card);
+
     }
 
 
     updateTimeline();
 
 
-    // Add event to activity log
-    addLog(
-        currentActivity,
-        `${step.protocol} — ${step.title}`
-    );
+    // Only application-layer steps are written
+    // into the existing activity log.
+    if (currentProtocolView === "application") {
 
+        addLog(
+            currentActivity,
+            `${step.protocol} — ${step.title}`
+        );
 
-    updateActivityStatus(step);
+        updateActivityStatus(step);
+
+    }
 }
 
+// ============================================================
+// TRANSPORT STEP SELECTION
+// ============================================================
+
+function getVisibleSteps() {
+
+    if (
+        currentProtocolView === "transport" &&
+        transportSteps.length > 0
+    ) {
+        return transportSteps;
+    }
+
+    return currentSteps;
+}
+
+
+// ============================================================
+// TRANSPORT TIMELINE
+// ============================================================
+
+function getCurrentStepList() {
+
+    return getVisibleSteps();
+}
 
 // ============================================================
 // TIMELINE
@@ -362,10 +442,13 @@ function createTimeline() {
         return;
     }
 
+    const visibleSteps =
+        getCurrentStepList();
+
     timeline.innerHTML = "";
 
 
-    currentSteps.forEach((step, index) => {
+    visibleSteps.forEach((step, index) => {
 
         const item =
             document.createElement("div");
@@ -415,6 +498,9 @@ function createTimeline() {
         timeline.appendChild(item);
 
     });
+
+
+    updateTimeline();
 }
 
 
@@ -422,6 +508,9 @@ function updateTimeline() {
 
     const items =
         document.querySelectorAll(".timeline-item");
+
+    const visibleSteps =
+        getCurrentStepList();
 
 
     items.forEach((item, index) => {
@@ -440,6 +529,18 @@ function updateTimeline() {
         }
 
     });
+
+
+    const counter =
+        document.getElementById("stepCounter");
+
+
+    if (counter && visibleSteps.length) {
+
+        counter.textContent =
+            `STEP ${currentStep + 1} / ${visibleSteps.length}`;
+
+    }
 }
 
 
@@ -451,7 +552,10 @@ function startTimer() {
 
     stopTimer();
 
-    if (!currentSteps.length) {
+    const visibleSteps =
+        getCurrentStepList();
+
+    if (!visibleSteps.length) {
         return;
     }
 
@@ -463,7 +567,14 @@ function startTimer() {
         }
 
 
-        if (currentStep < currentSteps.length - 1) {
+        const activeSteps =
+            getCurrentStepList();
+
+
+        if (
+            currentStep <
+            activeSteps.length - 1
+        ) {
 
             nextStep();
 
@@ -471,12 +582,20 @@ function startTimer() {
 
             stopTimer();
 
-            updateActivityStatus({
-                protocol: "COMPLETE",
-                title: "Trace complete",
-                description:
-                    "Protocol sequence completed."
-            });
+
+            if (
+                currentProtocolView ===
+                "application"
+            ) {
+
+                updateActivityStatus({
+                    protocol: "COMPLETE",
+                    title: "Trace complete",
+                    description:
+                        "Protocol sequence completed."
+                });
+
+            }
 
         }
 
@@ -501,18 +620,26 @@ function stopTimer() {
 
 function nextStep() {
 
-    if (!currentSteps.length) {
+    const visibleSteps =
+        getCurrentStepList();
+
+    if (!visibleSteps.length) {
         return;
     }
 
 
-    if (currentStep < currentSteps.length - 1) {
+    if (
+        currentStep <
+        visibleSteps.length - 1
+    ) {
 
         showStep(currentStep + 1);
 
     } else {
 
-        showStep(currentSteps.length - 1);
+        showStep(
+            visibleSteps.length - 1
+        );
 
     }
 }
@@ -520,7 +647,10 @@ function nextStep() {
 
 function previousStep() {
 
-    if (!currentSteps.length) {
+    const visibleSteps =
+        getCurrentStepList();
+
+    if (!visibleSteps.length) {
         return;
     }
 
@@ -532,7 +662,9 @@ function previousStep() {
 
     if (currentStep > 0) {
 
-        showStep(currentStep - 1);
+        showStep(
+            currentStep - 1
+        );
 
     } else {
 
@@ -760,7 +892,10 @@ Connection: keep-alive`
     ];
 
 
-    loadSteps(steps);
+    loadSteps(
+        steps,
+        createBrowsingTransportSteps()
+    );
 }
 
 
@@ -1042,7 +1177,10 @@ ${safeBody}
     ];
 
 
-    loadSteps(steps);
+    loadSteps(
+        steps,
+        createMailTransportSteps()
+    );
 }
 
 
@@ -1269,7 +1407,10 @@ Content-Length: 847516`
     ];
 
 
-    loadSteps(steps);
+    loadSteps(
+        steps,
+        createStreamingTransportSteps()
+    );
 }
 
 
@@ -1501,3 +1642,1046 @@ document.addEventListener(
 document.addEventListener("DOMContentLoaded", function () {
   renderIdleNetwork();
 });
+
+// ============================================================
+// PROTOCOL VIEW SWITCHING
+// ============================================================
+
+// ============================================================
+// PROTOCOL VIEW SWITCHING
+// ============================================================
+
+function switchProtocolView(view) {
+
+    currentProtocolView = view;
+
+
+    const applicationTab =
+        document.getElementById("applicationViewTab");
+
+    const transportTab =
+        document.getElementById("transportViewTab");
+
+
+    if (applicationTab) {
+
+        applicationTab.classList.toggle(
+            "active",
+            view === "application"
+        );
+
+    }
+
+
+    if (transportTab) {
+
+        transportTab.classList.toggle(
+            "active",
+            view === "transport"
+        );
+
+    }
+
+
+    if (
+        currentSteps.length > 0 &&
+        currentStep >= 0
+    ) {
+
+        createTimeline();
+
+        showStep(currentStep);
+
+    }
+}
+// ============================================================
+// TCP — BROWSING
+// ============================================================
+
+function createBrowsingTransportSteps() {
+
+    return [
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "SYN",
+
+            description:
+                "The client requests a TCP connection and sends its initial sequence number.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 1000
+Ack: 0
+Win: 64240
+Flags: SYN
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "SYN-ACK",
+
+            description:
+                "The server acknowledges the client's SYN and sends its own initial sequence number.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 5000
+Ack: 1001
+Win: 65535
+Flags: SYN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "ACK",
+
+            description:
+                "The client acknowledges the server's SYN and completes the TCP three-way handshake.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 1001
+Ack: 5001
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "HTTP GET Data",
+
+            description:
+                "The HTTP request is carried inside the established TCP byte stream.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 1001
+Ack: 5001
+Win: 64240
+Flags: PSH, ACK
+Length: 78`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "ACK — HTTP Request",
+
+            description:
+                "The server acknowledges receipt of the HTTP request bytes.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 5001
+Ack: 1079
+Win: 65535
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "HTTP Response Data",
+
+            description:
+                "The server sends the HTTP response through the TCP byte stream.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 5001
+Ack: 1079
+Win: 65535
+Flags: PSH, ACK
+Length: 1256`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "ACK — HTTP Response",
+
+            description:
+                "The client acknowledges the received response bytes.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 1079
+Ack: 6257
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "FIN",
+
+            description:
+                "The client begins TCP connection termination.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 1079
+Ack: 6257
+Win: 64240
+Flags: FIN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "ACK — FIN",
+
+            description:
+                "The server acknowledges the client's FIN.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 6257
+Ack: 1080
+Win: 65535
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "FIN",
+
+            description:
+                "The server closes its sending side of the TCP connection.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 6257
+Ack: 1080
+Win: 65535
+Flags: FIN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "Final ACK",
+
+            description:
+                "The client acknowledges the server FIN and completes connection teardown.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 1080
+Ack: 6258
+Win: 64240
+Flags: ACK
+Length: 0`
+        }
+
+    ];
+}
+
+
+// ============================================================
+// TCP — MAIL
+// ============================================================
+
+function createMailTransportSteps() {
+
+    return [
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "CLIENT → MAIL SERVER",
+
+            title:
+                "SYN",
+
+            description:
+                "The SMTP client requests a TCP connection to the mail server.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 2000
+Ack: 0
+Win: 64240
+Flags: SYN
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "MAIL SERVER → CLIENT",
+
+            title:
+                "SYN-ACK",
+
+            description:
+                "The mail server acknowledges the connection request.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 6000
+Ack: 2001
+Win: 65535
+Flags: SYN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "CLIENT → MAIL SERVER",
+
+            title:
+                "ACK",
+
+            description:
+                "The client completes the TCP three-way handshake.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 2001
+Ack: 6001
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "CLIENT → MAIL SERVER",
+
+            title:
+                "SMTP Data",
+
+            description:
+                "SMTP commands and message content are carried over the established TCP stream.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 2001
+Ack: 6001
+Win: 64240
+Flags: PSH, ACK
+Length: 320`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "MAIL SERVER → CLIENT",
+
+            title:
+                "SMTP Response",
+
+            description:
+                "The server acknowledges the received SMTP data.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 6001
+Ack: 2321
+Win: 65535
+Flags: PSH, ACK
+Length: 48`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "CLIENT → MAIL SERVER",
+
+            title:
+                "ACK",
+
+            description:
+                "The client acknowledges the SMTP server response.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 2321
+Ack: 6049
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "CLIENT → MAIL SERVER",
+
+            title:
+                "FIN",
+
+            description:
+                "The SMTP client begins closing the TCP connection.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 2321
+Ack: 6049
+Win: 64240
+Flags: FIN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "MAIL SERVER → CLIENT",
+
+            title:
+                "ACK — FIN",
+
+            description:
+                "The mail server acknowledges the client's FIN.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 6049
+Ack: 2322
+Win: 65535
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "MAIL SERVER → CLIENT",
+
+            title:
+                "FIN",
+
+            description:
+                "The mail server closes its sending side of the TCP connection.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 6049
+Ack: 2322
+Win: 65535
+Flags: FIN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 25",
+
+            direction:
+                "CLIENT → MAIL SERVER",
+
+            title:
+                "Final ACK",
+
+            description:
+                "The client acknowledges the server FIN.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 2322
+Ack: 6050
+Win: 64240
+Flags: ACK
+Length: 0`
+        }
+
+    ];
+}
+
+
+// ============================================================
+// TCP — STREAMING
+// ============================================================
+
+function createStreamingTransportSteps() {
+
+    return [
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "SYN",
+
+            description:
+                "The streaming client opens a TCP connection to the media server.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3000
+Ack: 0
+Win: 64240
+Flags: SYN
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "SYN-ACK",
+
+            description:
+                "The media server acknowledges the connection request.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 7000
+Ack: 3001
+Win: 65535
+Flags: SYN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "ACK",
+
+            description:
+                "The client completes the TCP three-way handshake.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3001
+Ack: 7001
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "Manifest Request",
+
+            description:
+                "The HTTP manifest request is carried inside the TCP stream.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3001
+Ack: 7001
+Win: 64240
+Flags: PSH, ACK
+Length: 92`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "Manifest Response",
+
+            description:
+                "The server delivers the stream manifest over TCP.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 7001
+Ack: 3093
+Win: 65535
+Flags: PSH, ACK
+Length: 420`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "ACK — Manifest",
+
+            description:
+                "The client acknowledges the manifest data.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3093
+Ack: 7421
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "Segment 1 Request",
+
+            description:
+                "The client requests the first media segment.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3093
+Ack: 7421
+Win: 64240
+Flags: PSH, ACK
+Length: 86`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "Segment 1 Data",
+
+            description:
+                "The server sends the first media segment through TCP.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 7421
+Ack: 3179
+Win: 65535
+Flags: PSH, ACK
+Length: 842144`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "ACK — Segment 1",
+
+            description:
+                "The client acknowledges the received media segment.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3179
+Ack: 849565
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "Segment 2 Request",
+
+            description:
+                "The client requests the second media segment.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3179
+Ack: 849565
+Win: 64240
+Flags: PSH, ACK
+Length: 86`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "Segment 2 Data",
+
+            description:
+                "The server sends the second media segment.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 849565
+Ack: 3265
+Win: 65535
+Flags: PSH, ACK
+Length: 851920`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "ACK — Segment 2",
+
+            description:
+                "The client acknowledges the second media segment.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3265
+Ack: 1701485
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "Segment 3 Request",
+
+            description:
+                "The client requests the third media segment.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3265
+Ack: 1701485
+Win: 64240
+Flags: PSH, ACK
+Length: 86`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "Segment 3 Data",
+
+            description:
+                "The server sends the third media segment.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 1701485
+Ack: 3351
+Win: 65535
+Flags: PSH, ACK
+Length: 847516`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "ACK — Segment 3",
+
+            description:
+                "The client acknowledges the third media segment.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3351
+Ack: 2549001
+Win: 64240
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "FIN",
+
+            description:
+                "The client begins closing the TCP connection.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3351
+Ack: 2549001
+Win: 64240
+Flags: FIN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "ACK — FIN",
+
+            description:
+                "The server acknowledges the client's FIN.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 2549001
+Ack: 3352
+Win: 65535
+Flags: ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "SERVER → CLIENT",
+
+            title:
+                "FIN",
+
+            description:
+                "The server closes its sending side of the TCP connection.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 2549001
+Ack: 3352
+Win: 65535
+Flags: FIN, ACK
+Length: 0`
+        },
+
+
+        {
+            transportProtocol: "TCP",
+            transport: "TCP · Port 80",
+
+            direction:
+                "CLIENT → SERVER",
+
+            title:
+                "Final ACK",
+
+            description:
+                "The client acknowledges the server FIN and completes TCP teardown.",
+
+            message:
+                `TCP SEGMENT
+
+Seq: 3352
+Ack: 2549002
+Win: 64240
+Flags: ACK
+Length: 0`
+        }
+
+    ];
+}
